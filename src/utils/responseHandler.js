@@ -7,8 +7,9 @@ import AddUserToRoom from "./addUserToRoom.js";
 import AddShips from "./addShips.js";
 import Turn from "./turn.js";
 import Attack from "./attack.js";
-
-export default function Handler(request, ws, server) {
+import ShotMap from "./shotMap.js";
+import { gameData } from "../db/db.js";
+export default async function Handler(request, ws, server) {
     switch (request.type) {
         case "reg":
             ws.send(RegResponse(JSON.parse(request.data), ws));
@@ -38,11 +39,12 @@ export default function Handler(request, ws, server) {
                     }
                 });
             }
+            break;
         case "add_ships":
             const gameId = JSON.parse(request.data).gameId;
             const gamePositions = JSON.parse(request.data).ships;
-            const isUsersReady = AddShips(ws.clientId, gameId, gamePositions);
-
+            let shotMap = ShotMap(gamePositions);
+            const isUsersReady = AddShips(ws.clientId, gameId, gamePositions, shotMap);
             if (isUsersReady) {
                 server.clients.forEach(client => {
                     if (client.clientId === isUsersReady) {
@@ -58,7 +60,9 @@ export default function Handler(request, ws, server) {
             break;
         case "attack":
             const data = JSON.parse(request.data);
-            Attack(data)
+            server.clients.forEach(client => {
+                client.send(Attack(data));
+            });
             break;
         default:
             break;

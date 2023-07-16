@@ -1,10 +1,11 @@
 import { gameData } from "../db/db.js"
-export default function AddShips (userId, gameId, gamePositions) {
+export default function AddShips (userId, gameId, gamePositions, shotMap) {
     let game = gameData.find(game => game.gameId === gameId && userId === game.indexPlayer);
     let isAllPlayersReady = false;
     if (game) {
         let index = gameData.findIndex(item => item.indexPlayer === userId);
         if (index !== -1) {
+            gameData[index].shotMap = shotMap;
             gameData[index].ships.push(...gamePositions);
         }
         let secondPlayer = gameData.find(game => game.gameId === gameId && userId !== game.indexPlayer);
