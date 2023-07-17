@@ -1,35 +1,36 @@
-import { gameData } from "../db/db.js"
+import { gameData } from "../db/db.js";
+import IsKilled from "./isKilled.js";
 export default function Shot (data) {
     const roomId = data.gameId;
-    const shot = [data.x, data.y];
     const playerId = data.indexPlayer;
-
+    let turn = gameData.find(game => game.indexPlayer === playerId).turn;
+    let index = gameData.findIndex(item => item.gameId === roomId && item.indexPlayer !== playerId);
     let targetPlayer = gameData.find(
         (game) => game.gameId === roomId && game.indexPlayer !== playerId
     );
-
     const shotMap = targetPlayer.shotMap;
     let status = "miss";
-    for (let i = 0; i < shotMap.length; i++) {
-        const ship = shotMap[i];
-
-        if (ship.some((coord) => coord[0] === shot[0] && coord[1] === shot[1])) {
-        shotMap.splice(i, 1);
-        status = "shot";
-        break;
-        }
+    let coordinates;
+    let coordinatesAround;
+    if (!turn) {
+      status = false;
+    } else if (shotMap[data.y][data.x] === -1) {
+      status = false;
+    } else if (shotMap[data.y][data.x] === 0) {
+      gameData[index].shotMap[data.y][data.x] = -1;
+    } else {
+      status = "shot";
+      gameData[index].shotMap[data.y][data.x] = -1;
+      const isKilled = IsKilled(data);
+      if (isKilled.isKilled) {
+        coordinates = isKilled.killedShipCoordinates;
+        coordinatesAround = isKilled.coordinatesAroundShips
+        status = "killed";
+      }
     }
-    const response = {
-        type: "attack",
-        data: JSON.stringify({
-          position: {
-            x: data.x,
-            y: data.y,
-          },
-          currentPlayer: playerId,
-          status: status,
-        }),
-        id: 0,
-    };
-    return response;
+  return {
+    status: status,
+    coordinates: coordinates,
+    coordinatesAround: coordinatesAround
+  };
 }

@@ -9,19 +9,34 @@ import Turn from "./turn.js";
 import Attack from "./attack.js";
 import ShotMap from "./shotMap.js";
 import { gameData } from "../db/db.js";
+import { roomData } from "../db/db.js";
+import CreatePositions from "../methods/createPositions.js";
+import Finish from "./finish.js";
+import AddWinner from "../methods/addWinner.js";
+import UpdateWinners from "./updateWinners.js";
 export default async function Handler(request, ws, server) {
+    let clients = [];
+    let data;
+    let targetPlayer;
+    let isRandomAttack;
+    let finish;
+    let updateWinners;
     switch (request.type) {
         case "reg":
             ws.send(RegResponse(JSON.parse(request.data), ws));
             server.clients.forEach(client => {
                 client.send(UpdateRoom());
+                client.send(UpdateWinners());
             });
             break;
         case "create_room":
-            CreateRoom(ws.clientId);
-            server.clients.forEach(client => {
-                client.send(UpdateRoom());
-            });
+            let isRoomCreated = roomData.find(room => room.roomId === ws.clientId);
+            if (!isRoomCreated) {
+                CreateRoom(ws.clientId);
+                server.clients.forEach(client => {
+                    client.send(UpdateRoom());
+                });
+            }
             break;
         case "add_user_to_room":
             const indexRoom = JSON.parse(request.data).indexRoom;
@@ -30,7 +45,7 @@ export default async function Handler(request, ws, server) {
                 server.clients.forEach(client => {
                     client.send(UpdateRoom());
                 });
-                
+                console.log(roomData)
                 server.clients.forEach(client => {
                     if (client.clientId === isUserAdded) {
                         client.send(CreateGame(isUserAdded, isUserAdded));
@@ -44,25 +59,79 @@ export default async function Handler(request, ws, server) {
             const gameId = JSON.parse(request.data).gameId;
             const gamePositions = JSON.parse(request.data).ships;
             let shotMap = ShotMap(gamePositions);
-            const isUsersReady = AddShips(ws.clientId, gameId, gamePositions, shotMap);
+            let shipsPositions = CreatePositions(gamePositions);
+            const isUsersReady = AddShips(ws.clientId, gameId, gamePositions, shotMap, shipsPositions);
+            clients = [];
+            server.clients.forEach(client => {
+                if (client.clientId === isUsersReady || client.clientId === ws.clientId) {
+                    clients.push(client);
+                }
+            });
             if (isUsersReady) {
-                server.clients.forEach(client => {
-                    if (client.clientId === isUsersReady) {
-                        client.send(StartGame(isUsersReady));
-                    } else if (client.clientId === ws.clientId) {
-                        client.send(StartGame(ws.clientId));
-                    }
-                });
-                server.clients.forEach(client => {
-                    client.send(Turn(ws.clientId));
-                });
+                clients.forEach(client => client.send(StartGame(client.clientId)));
+                clients.forEach(client => client.send(Turn(ws.clientId)));
             }
             break;
         case "attack":
-            const data = JSON.parse(request.data);
+            data = JSON.parse(request.data);
+            isRandomAttack = false;
+            targetPlayer = gameData.find(
+                (game) => game.gameId === data.gameId && game.indexPlayer !== data.indexPlayer
+            );
+            clients = [];
             server.clients.forEach(client => {
-                client.send(Attack(data));
+                if (client.clientId === targetPlayer.indexPlayer || client.clientId === ws.clientId) {
+                    clients.push(client);
+                }
             });
+            const attack = Attack(data, isRandomAttack);
+            if (attack.status === "shot") {
+                clients.forEach(client => client.send(JSON.stringify(attack.response)));
+                clients.forEach(client => client.send(Turn(ws.clientId)));
+            } else if (attack.status === "killed") {
+                attack.response.forEach(killResponse => {
+                    clients.forEach(client => client.send(JSON.stringify(killResponse)));
+                    clients.forEach(client => client.send(Turn(ws.clientId)));
+                });
+            }
+            finish =  Finish(ws.clientId);
+            if (finish.isFinish) {
+                AddWinner(ws.clientId);
+                updateWinners = UpdateWinners();
+                clients.forEach(client => client.send(finish.response));
+                clients.forEach(client => client.send(updateWinners));
+            } 
+            break;
+        case "randomAttack":
+            data = JSON.parse(request.data);
+            isRandomAttack = true;
+            targetPlayer = gameData.find(
+                (game) => game.gameId === data.gameId && game.indexPlayer !== data.indexPlayer
+            );
+            clients = [];
+            server.clients.forEach(client => {
+                if (client.clientId === targetPlayer.indexPlayer || client.clientId === ws.clientId) {
+                    clients.push(client);
+                }
+            });
+            const randomAttack = Attack(data, isRandomAttack);
+            if (randomAttack.status === "shot") {
+                clients.forEach(client => client.send(JSON.stringify(randomAttack.response)));
+                clients.forEach(client => client.send(Turn(ws.clientId)));
+            } else if (randomAttack.status === "killed") {
+                randomAttack.response.forEach(killResponse => {
+                    clients.forEach(client => client.send(JSON.stringify(killResponse)));
+                    clients.forEach(client => client.send(Turn(ws.clientId)));
+                });
+            }
+            finish =  Finish(ws.clientId);
+            if (finish.isFinish) {
+                AddWinner(ws.clientId);
+                updateWinners = UpdateWinners();
+                clients.forEach(client => client.send(finish.response));
+                clients.forEach(client => client.send(updateWinners));
+                
+            }    
             break;
         default:
             break;

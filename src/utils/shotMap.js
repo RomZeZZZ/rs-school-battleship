@@ -1,16 +1,16 @@
+import CreateField from "../methods/createField.js";
 export default function ShotMap (shipsPositions) {
-    let shipsMap = [];
+    let shipsMap = CreateField();
     shipsPositions.forEach(element => {
-        let ship = [];
-        ship.push([element.position.x, element.position.y]);
-        for (let index = 1; index < element.length; index++) {
-           if (element.direction) {
-            ship.push([element.position.x, element.position.y + index]);
-           } else {
-            ship.push([element.position.x + index, element.position.y]);
-           }
+        if (element.direction) {
+            for (let index = element.position.y; index < element.position.y + element.length; index++) {
+                shipsMap[index][element.position.x] = element.length;
+            }
+        } else {
+            for (let index = element.position.x; index < element.position.x + element.length; index++) {
+                shipsMap[element.position.y][index] = element.length;
+            }
         }
-        shipsMap.push(ship);
     });
     return shipsMap;
 }

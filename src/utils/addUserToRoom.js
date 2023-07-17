@@ -13,6 +13,10 @@ export default function AddUserToRoom (indexRoom, clientId) {
         if (index !== -1) {
             roomData.splice(index, 1);
         }
+        let indexCurrentUserRoom = roomData.findIndex(item => item.roomId === clientId);
+        if (indexCurrentUserRoom !== -1) {
+            roomData.splice(indexCurrentUserRoom, 1);
+        }
     }
     return isConnected ? mainUserId : false;
 }
