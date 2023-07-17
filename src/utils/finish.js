@@ -6,12 +6,14 @@ export default function Finish (clientId) {
     let targetPlayer = gameData.find(
         (game) => game.gameId === roomId && game.indexPlayer !== clientId
     );
-    const shotMap = targetPlayer.shotMap;
-    for (let i = 0; i < shotMap.length; i++) {
-        for (let j = 0; j < shotMap[i].length; j++) {
-          const element = shotMap[i][j];
-            if (element !== -1 && element !== 0) {
-                isFinish = false;
+    if (targetPlayer.shotMap) {
+        const shotMap = targetPlayer.shotMap;
+        for (let i = 0; i < shotMap.length; i++) {
+            for (let j = 0; j < shotMap[i].length; j++) {
+            const element = shotMap[i][j];
+                if (element !== -1 && element !== 0) {
+                    isFinish = false;
+                }
             }
         }
     }

@@ -14,6 +14,7 @@ import CreatePositions from "../methods/createPositions.js";
 import Finish from "./finish.js";
 import AddWinner from "../methods/addWinner.js";
 import UpdateWinners from "./updateWinners.js";
+import ClearData from "../methods/clearData.js";
 export default async function Handler(request, ws, server) {
     let clients = [];
     let data;
@@ -45,7 +46,6 @@ export default async function Handler(request, ws, server) {
                 server.clients.forEach(client => {
                     client.send(UpdateRoom());
                 });
-                console.log(roomData)
                 server.clients.forEach(client => {
                     if (client.clientId === isUserAdded) {
                         client.send(CreateGame(isUserAdded, isUserAdded));
@@ -98,6 +98,7 @@ export default async function Handler(request, ws, server) {
             if (finish.isFinish) {
                 AddWinner(ws.clientId);
                 updateWinners = UpdateWinners();
+                ClearData(ws.clientId);
                 clients.forEach(client => client.send(finish.response));
                 clients.forEach(client => client.send(updateWinners));
             } 
@@ -128,12 +129,10 @@ export default async function Handler(request, ws, server) {
             if (finish.isFinish) {
                 AddWinner(ws.clientId);
                 updateWinners = UpdateWinners();
+                ClearData(ws.clientId);
                 clients.forEach(client => client.send(finish.response));
                 clients.forEach(client => client.send(updateWinners));
-                
             }    
-            break;
-        default:
             break;
     }
 }
